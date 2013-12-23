@@ -1,0 +1,12 @@
+doctype 5
+html
+  head
+    title= title
+    link(rel='stylesheet', href='/css/style.css')
+  body
+    h1= Photos
+    ul
+      for photo in photos
+        img(src="uploads/#{photo}")
+      else
+        li sorry, no photo!
