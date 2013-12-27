@@ -1,8 +1,9 @@
-doctype 5
-html
+!!!
+html(ng-app="myApp")
   head
-    title= title
-    link(rel='stylesheet', href='/css/style.css')
-    script(src='http://localhost:35729/livereload.js')
+    meta(charset='utf8')
+    base(href='/')
+    title Angular Socket.io Seed App
+    link(rel='stylesheet', href='/css/app.css')
   body
-    block content
+    block body

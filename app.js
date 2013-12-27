@@ -1,38 +1,86 @@
 
 /**
- * Module dependencies.
+ * Module dependencies
  */
 
-var express = require('express')
-  , routes = require('./routes')
-  , user = require('./routes/user')
-  , photos = require('./routes/photos')
-  , http = require('http')
-  , path = require('path');
+var express = require('express'),
+  routes = require('./routes'),
+  api = require('./routes/api'),
+  http = require('http'),
+  childProcess = require('child_process'),
+  path = require('path');
 
-var app = express();
+var app = module.exports = express();
+var server = require('http').createServer(app);
+var io = require('socket.io').listen(server);
 
-app.configure(function(){
-  app.set('port', process.env.PORT || 3000);
-  app.set('views', __dirname + '/views');
-  app.set('view engine', 'jade');
-  app.use(express.favicon());
-  app.use(express.logger('dev'));
-  app.use(express.methodOverride());
-  app.use(app.router);
-  app.use(express.static(path.join(__dirname, 'public')));
-  app.use(express.bodyParser({ uploadDir:__dirname + '/public/uploads' }));
-});
+/**
+ * Configuration
+ */
 
-app.configure('development', function(){
+// all environments
+app.set('port', process.env.PORT || 3000);
+app.set('views', __dirname + '/views');
+app.set('view engine', 'jade');
+app.use(express.logger('dev'));
+app.use(express.bodyParser());
+app.use(express.methodOverride());
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(app.router);
+
+// development only
+if (app.get('env') === 'development') {
   app.use(express.errorHandler());
+}
+
+// production only
+if (app.get('env') === 'production') {
+  // TODO
+};
+
+
+/**
+ * Routes
+ */
+
+// serve index and view partials
+app.get('/', routes.index);
+app.get('/partials/:name', routes.partials);
+
+// JSON API
+app.get('/api/name', api.name);
+
+// redirect all others to the index (HTML5 history)
+app.get('*', routes.index);
+
+// Socket.io Communication
+io.sockets.on('connection', function (socket) {
+  socket.emit('send:name', {
+    name: 'Bob'
+  });
+
+  setInterval(function () {
+    socket.emit('send:time', {
+      time: (new Date()).toString()
+    });
+    socket.emit('send:connections', io.sockets.clients().length);
+  }, 1000);
+
+  // on connection, start taking a picture every 5 seconds
+  var imgCount = 0;
+  setInterval(function() {
+    console.log('taking picture');
+      childProcess.exec('raspistill -o public/images/image' + imgCount++ + '.jpg', function() {
+        socket.emit('send:image', { path: 'images/image' + (imgCount - 1) + '.jpg' });
+      });
+  }, 5000);
+
 });
 
-app.get('/', routes.index);
-app.get('/users', user.list);
-app.post('/photos', photos.add);
-app.get('/photos', photos.list);
+/**
+ * Start Server
+ */
 
-http.createServer(app).listen(app.get('port'), function(){
-  console.log("Express server listening on port " + app.get('port'));
+server.listen(app.get('port'), function () {
+  console.log('Express server listening on port ' + app.get('port'));
 });
